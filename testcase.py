@@ -10,9 +10,9 @@ class TestDES(unittest.TestCase):
     def test_data(self):
         key = 0x133457799bbcdff1
         data = b'Hello World!'
-        des = DES()
-        cyphertext = des.encrypt(data, key)
-        plaintext = des.decrypt(cyphertext, key)
+        des = DES(key)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -20,9 +20,9 @@ class TestDES(unittest.TestCase):
         key = random.randrange(0xffffffffffffffff)
         data = os.urandom(64)
 
-        aes = DES()
-        cyphertext = aes.encrypt(data, key)
-        plaintext = aes.decrypt(cyphertext, key)
+        aes = DES(key)
+        cyphertext = aes.encrypt(data)
+        plaintext = aes.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -30,9 +30,9 @@ class TestDES(unittest.TestCase):
         key = 0x133457799bbcdff1
         data = 'Hello World!'
 
-        des = DES()
-        cyphertext = des.encrypt(data, key)
-        plaintext = des.decrypt(cyphertext, key)
+        des = DES(key)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -40,23 +40,23 @@ class TestDES(unittest.TestCase):
         key = random.randrange(0xffffffffffffffff)
         data = ''.join(random.choice(string.ascii_letters) for _ in range(64))
 
-        aes = DES()
-        cyphertext = aes.encrypt(data, key)
-        plaintext = aes.decrypt(cyphertext, key)
+        aes = DES(key)
+        cyphertext = aes.encrypt(data)
+        plaintext = aes.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
 
-class TestTripleDESDES(unittest.TestCase):
+class TestTripleDES(unittest.TestCase):
     def test_data(self):
         key1 = 0x133457799bbcdff1
         key2 = 0x0123456789abcdef
         key3 = 0xfedcba9876543210
         data = b'Hello World!'
 
-        des = TripleDES()
-        cyphertext = des.encrypt(data, key1, key2, key3)
-        plaintext = des.decrypt(cyphertext, key1, key2, key3)
+        des = TripleDES(key1, key2, key3)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -66,9 +66,9 @@ class TestTripleDESDES(unittest.TestCase):
         key3 = random.randrange(0xffffffffffffffff)
         data = os.urandom(64)
 
-        des = TripleDES()
-        cyphertext = des.encrypt(data, key1, key2, key3)
-        plaintext = des.decrypt(cyphertext, key1, key2, key3)
+        des = TripleDES(key1, key2, key3)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -78,9 +78,9 @@ class TestTripleDESDES(unittest.TestCase):
         key3 = 0xfedcba9876543210
         data = 'Hello World!'
 
-        des = TripleDES()
-        cyphertext = des.encrypt(data, key1, key2, key3)
-        plaintext = des.decrypt(cyphertext, key1, key2, key3)
+        des = TripleDES(key1, key2, key3)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 
@@ -90,9 +90,9 @@ class TestTripleDESDES(unittest.TestCase):
         key3 = random.randrange(0xffffffffffffffff)
         data = ''.join(random.choice(string.ascii_letters) for _ in range(64))
 
-        des = TripleDES()
-        cyphertext = des.encrypt(data, key1, key2, key3)
-        plaintext = des.decrypt(cyphertext, key1, key2, key3)
+        des = TripleDES(key1, key2, key3)
+        cyphertext = des.encrypt(data)
+        plaintext = des.decrypt(cyphertext)
 
         self.assertEqual(data, plaintext)
 

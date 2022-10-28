@@ -11,7 +11,7 @@ Decryption: `P = D(K1, C)`
 
 key = 0x133457799bbcdff1
 
-des = DES()
+des = DES(key)
 cyphertext = des.encrypt('Hello World!', key)
 plaintext = des.decrypt(cyphertext, key) 
 ```
@@ -30,7 +30,7 @@ key1 = 0x133457799bbcdff1
 key2 = 0x0123456789abcdef
 key3 = 0xfedcba9876543210
 
-des = TripleDES()
-cyphertext = des.encrypt(b'Hello World!', key1, key2, key3)
-plaintext = des.decrypt(cyphertext, key1, key2, key3)
+des = TripleDES(key1, key2, key3)
+cyphertext = des.encrypt(b'Hello World!')
+plaintext = des.decrypt(cyphertext)
 ```

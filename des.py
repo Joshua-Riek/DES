@@ -16,13 +16,11 @@ class DES(object):
         Decryption: P = D(K1, C)
 
     Usage:
-        des = DES()
-        cyphertext = des.encrypt('Hello World!', 0x133457799bbcdff1)
-        plaintext = des.decrypt(cyphertext, 0x133457799bbcdff1)
+        des = DES(0x133457799bbcdff1)
+        cyphertext = des.encrypt('Hello World!')
+        plaintext = des.decrypt(cyphertext)
     """
-    def __init__(self, binary_data=False):
-        self.binary_data = binary_data
-
+    def __init__(self, key1):
         self.pc1 = [
             57, 49, 41, 33, 25, 17, 9,
             1, 58, 50, 42, 34, 26, 18,
@@ -124,6 +122,8 @@ class DES(object):
              [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]]
         ]
 
+        self.key1 = self.sub_keys(key1)
+
     @staticmethod
     def unpad(data):
         """
@@ -208,7 +208,7 @@ class DES(object):
         C = ''.join(first_key[:int(len(first_key) / 2)])
         D = ''.join(first_key[int(len(first_key) / 2):])
         K = self.left_shift(C, D)
-        return re.findall('.' * 48, ''.join([K[j - 1] for _ in range(1, 17) for j in self.pc2]))
+        return re.findall('.' * 48, ''.join([K[j - 1] for _ in range(1, 17) for j in self.pc2]))[::-1]
 
     def encrypt_block(self, b, k):
         """
@@ -252,39 +252,37 @@ class DES(object):
         reverse = R[-1] + L[-1]
         return ''.join([str(hex(int(x, 2))[2:]) for x in re.findall('.' * 4, ''.join([reverse[x - 1] for x in self.ip1]))])
 
-    def encrypt(self, data, key):
+    def encrypt(self, data):
         """
         Encrypt data with the specified key.
 
         @param data: Data to encrypt
-        @param key: 64-bit key
         @return: Encrypted data
         """
         if isinstance(data, str):
-            return ''.join(self.encrypt_block(x, self.sub_keys(key)[::-1]) for x in re.findall(
+            return ''.join(self.encrypt_block(x, self.key1) for x in re.findall(
                 '.' * 16, binascii.hexlify(self.pad(bytes(data, 'utf-8'))).decode()))
         elif isinstance(data, bytes):
             return b''.join(binascii.unhexlify(x.encode()) for x in [
-                self.decrypt_block(x, self.sub_keys(key)[::-1]) for x in re.findall(
+                self.decrypt_block(x, self.key1) for x in re.findall(
                     '.' * 16, binascii.hexlify(self.pad(data)).decode())])
         else:
             raise TypeError("Invalid data type.")
 
-    def decrypt(self, data, key):
+    def decrypt(self, data):
         """
         Decrypt data with the specified key.
 
         @param data: Data to decrypt
-        @param key: 64-bit key
         @return: Decrypted data
         """
         if isinstance(data, str):
             return self.unpad(bytes(''.join(chr(int(y, 16)) for x in [
-                self.decrypt_block(z, self.sub_keys(key)[::-1]) for z in re.findall(
+                self.decrypt_block(z, self.key1) for z in re.findall(
                     '.' * 16, data)] for y in re.findall('.' * 2, x)), 'utf-8')).decode()
         elif isinstance(data, bytes):
             return self.unpad(b''.join(binascii.unhexlify(block.encode()) for block in [
-                self.decrypt_block(x, self.sub_keys(key)[::-1]) for x in re.findall(
+                self.decrypt_block(x, self.key1) for x in re.findall(
                     '.' * 16, binascii.hexlify(data).decode())]))
         else:
             raise TypeError("Invalid data type.")
@@ -303,55 +301,54 @@ class TripleDES(DES):
         Decryption: P = D(K1, E(K2, D(K3, C)))
 
     Usage:
-        des = TripleDES()
-        cyphertext = des.encrypt('Hello World!', 0x133457799bbcdff1, 0x0123456789abcdef, 0xfedcba9876543210)
-        plaintext = des.decrypt(cyphertext, 0x133457799bbcdff1, 0x0123456789abcdef, 0xfedcba9876543210) """
+        des = TripleDES(0x133457799bbcdff1, 0x0123456789abcdef, 0xfedcba9876543210)
+        cyphertext = des.encrypt('Hello World!')
+        plaintext = des.decrypt(cyphertext)
+    """
+    def __init__(self, key1, key2, key3):
+        super().__init__(key1)
+        self.key2 = self.sub_keys(key2)
+        self.key3 = self.sub_keys(key3)
 
-    def encrypt(self, data, key1, key2, key3):
+    def encrypt(self, data):
         """
         Encrypt data with the three specified keys.
 
         @param data: Data to encrypt
-        @param key1: First key
-        @param key2: Second key
-        @param key3: Third key
         @return: Encrypted data
         """
         if isinstance(data, str):
-            return ''.join(self.decrypt_block(x, self.sub_keys(key3)[::-1]) for x in [
-                self.decrypt_block(x, self.sub_keys(key2)[::-1]) for x in [
-                    self.encrypt_block(x, self.sub_keys(key1)[::-1]) for x in re.findall(
+            return ''.join(self.decrypt_block(x, self.key3) for x in [
+                self.decrypt_block(x, self.key2) for x in [
+                    self.encrypt_block(x, self.key1) for x in re.findall(
                         '.' * 16, binascii.hexlify(self.pad(bytes(data, 'utf-8'))).decode())]])
         elif isinstance(data, bytes):
             return b''.join(binascii.unhexlify(x.encode()) for x in [
-                self.decrypt_block(x, self.sub_keys(key3)[::-1]) for x in [
-                    self.decrypt_block(x, self.sub_keys(key2)[::-1]) for x in [
-                        self.decrypt_block(x, self.sub_keys(key1)[::-1]) for x in re.findall(
+                self.decrypt_block(x, self.key3) for x in [
+                    self.decrypt_block(x, self.key2) for x in [
+                        self.decrypt_block(x, self.key1) for x in re.findall(
                             '.' * 16, binascii.hexlify(self.pad(data)).decode())]]])
         else:
             raise TypeError("Invalid data type.")
 
-    def decrypt(self, data, key1, key2, key3):
+    def decrypt(self, data):
         """
         Decrypt data with the three specified keys.
 
         @param data: Data to decrypt
-        @param key1: First key
-        @param key2: Second key
-        @param key3: Third key
         @return: Decrypted data
         """
         if isinstance(data, str):
             return self.unpad(bytes(''.join(chr(int(y, 16)) for x in [
-                self.decrypt_block(x, self.sub_keys(key1)[::-1]) for x in [
-                    self.encrypt_block(x, self.sub_keys(key2)[::-1]) for x in [
-                        self.decrypt_block(x, self.sub_keys(key3)[::-1]) for x in re.findall(
+                self.decrypt_block(x, self.key1) for x in [
+                    self.encrypt_block(x, self.key2) for x in [
+                        self.decrypt_block(x, self.key3) for x in re.findall(
                             '.' * 16, data)]]] for y in re.findall('.' * 2, x)), 'utf-8')).decode()
         elif isinstance(data, bytes):
             return self.unpad(b''.join(binascii.unhexlify(block.encode()) for block in [
-                self.decrypt_block(x, self.sub_keys(key1)[::-1]) for x in [
-                    self.encrypt_block(x, self.sub_keys(key2)[::-1]) for x in [
-                        self.decrypt_block(x, self.sub_keys(key3)[::-1]) for x in re.findall(
+                self.decrypt_block(x, self.key1) for x in [
+                    self.encrypt_block(x, self.key2) for x in [
+                        self.decrypt_block(x, self.key3) for x in re.findall(
                             '.' * 16, binascii.hexlify(data).decode())]]]))
         else:
             raise TypeError("Invalid data type.")
