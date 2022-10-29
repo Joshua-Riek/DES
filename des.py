@@ -20,6 +20,7 @@ class DES(object):
         cyphertext = des.encrypt('Hello World!')
         plaintext = des.decrypt(cyphertext)
     """
+
     def __init__(self, key1):
         self.pc1 = [
             57, 49, 41, 33, 25, 17, 9,
@@ -132,16 +133,7 @@ class DES(object):
         @param data: Data to be un-padded
         @return: Data with removed padding
         """
-        p = None
-        for x in data[::-1]:
-            if x == 0:
-                continue
-            elif x != 0:
-                p = x
-                break
-        data = data[::-1]
-        data = data[p:]
-        return data[::-1]
+        return data[:-data[-1]]
 
     @staticmethod
     def pad(data):
@@ -151,10 +143,8 @@ class DES(object):
         @param data: Data to be padded
         @return: Data with padding
         """
-        if len(data) == 8:
-            return data
-        pads = 8 - (len(data) % 8)
-        return data + binascii.unhexlify(('%02x' % int(pads)).encode()) + b'\x00' * (pads - 1)
+        pad = 16 - (len(data) % 16)
+        return data + bytearray(pad for _ in range(pad))
 
     @staticmethod
     def left_shift(c, d):
@@ -176,7 +166,7 @@ class DES(object):
             if x not in iteration:
                 c_list.append(c)
                 d_list.append(d)
-        return ''.join((str(c_list[x]) + str(d_list[x])) for x in range(1, 17))
+        return ''.join(str(c_list[x]) + str(d_list[x]) for x in range(1, 17))
 
     def f(self, r, k):
         """
@@ -187,11 +177,11 @@ class DES(object):
         @param k: 48-bit Key
         @return: 32-bit data
         """
-        e = ''.join([r[int(x) - 1] for x in self.e])
-        xor = re.findall('.' * 6, ''.join(['1' if k[x] != e[x] else '0' for x in range(0, 48)]))
-        f = ''.join(['{:04b}'.format(
-            self.sbox[x][int(xor[x][0] + xor[x][-1], 2)][int(xor[x][1:-1], 2)]) for x in range(len(xor))])
-        return ''.join([f[int(x) - 1] for x in self.p])
+        e = ''.join(r[int(x) - 1] for x in self.e)
+        xor = re.findall('.' * 6, ''.join('1' if k[x] != e[x] else '0' for x in range(0, 48)))
+        f = ''.join('{:04b}'.format(
+            self.sbox[x][int(xor[x][0] + xor[x][-1], 2)][int(xor[x][1:-1], 2)]) for x in range(len(xor)))
+        return ''.join(f[int(x) - 1] for x in self.p)
 
     def sub_keys(self, key):
         """
@@ -203,12 +193,12 @@ class DES(object):
         if abs(key) >= 0xffffffffffffffff:
             raise ValueError("Key can not be larger than 64-bits.")
 
-        k = ''.join(['{:04b}'.format(int(x, 16)) for x in "%016x" % key])
-        first_key = re.findall('.' * 7, ''.join([k[int(x) - 1] for x in self.pc1]))
+        k = '{:064b}'.format(key)
+        first_key = re.findall('.' * 7, ''.join(k[int(x) - 1] for x in self.pc1))
         C = ''.join(first_key[:int(len(first_key) / 2)])
         D = ''.join(first_key[int(len(first_key) / 2):])
         K = self.left_shift(C, D)
-        return re.findall('.' * 48, ''.join([K[j - 1] for _ in range(1, 17) for j in self.pc2]))[::-1]
+        return re.findall('.' * 48, ''.join(K[j - 1] for _ in range(1, 17) for j in self.pc2))[::-1]
 
     def encrypt_block(self, b, k):
         """
@@ -218,18 +208,18 @@ class DES(object):
         @param k: List of expanded keys
         @return: Encrypted block
         """
-        B = ''.join(['{:04b}'.format(int(x, 16)) for x in b])
-        IP = re.findall('.' * 4, ''.join([B[int(x) - 1] for x in self.ip]))
+        B = '{:064b}'.format(int(b, 16))
+        IP = re.findall('.' * 4, ''.join(B[int(x) - 1] for x in self.ip))
         L = list(range(17))
         L[0] = ''.join(IP[:int(len(IP) / 2)])
         R = list(range(17))
         R[0] = ''.join(IP[int(len(IP) / 2):])
         for x in range(1, 17):
             L[x] = R[x - 1]
-            R[x] = ''.join(['1' if L[x - 1][i] != self.f(R[x - 1], k[x - 17])[i] else '0' for i in range(0, 32)])
+            R[x] = ''.join('1' if L[x - 1][i] != self.f(R[x - 1], k[x - 17])[i] else '0' for i in range(0, 32))
         reverse = R[-1] + L[-1]
-        IP = re.findall('.' * 8, ''.join([reverse[x - 1] for x in self.ip1]))
-        return ''.join(['%02x' % int(x, 2) for x in IP])
+        IP = re.findall('.' * 8, ''.join(reverse[x - 1] for x in self.ip1))
+        return ''.join('%02x' % int(x, 2) for x in IP)
 
     def decrypt_block(self, b, k):
         """
@@ -239,18 +229,17 @@ class DES(object):
         @param k: List of expanded keys
         @return: Decrypted block
         """
-        B = ''.join(['{:08b}'.format(int(x, 16)) for x in re.findall('.' * 2, b)])
-        IP = re.findall('.' * 4, ''.join([B[x - 1] for x in self.ip]))
+        B = '{:064b}'.format(int(b, 16))
+        IP = re.findall('.' * 4, ''.join(B[x - 1] for x in self.ip))
         L = list(range(17))
         L[0] = ''.join(IP[:int(len(IP) / 2)])
         R = list(range(17))
         R[0] = ''.join(IP[int(len(IP) / 2):])
         for x in range(1, 17):
             L[x] = R[x - 1]
-            R[x] = ''.join(
-                ['1' if L[x - 1][i] != self.f(R[x - 1], k[x - 17])[i] else '0' for i in range(0, 32)])
+            R[x] = ''.join('1' if L[x - 1][i] != self.f(R[x - 1], k[x - 17])[i] else '0' for i in range(0, 32))
         reverse = R[-1] + L[-1]
-        return ''.join([str(hex(int(x, 2))[2:]) for x in re.findall('.' * 4, ''.join([reverse[x - 1] for x in self.ip1]))])
+        return ''.join(str(hex(int(x, 2))[2:]) for x in re.findall('.' * 4, ''.join(reverse[x - 1] for x in self.ip1)))
 
     def encrypt(self, data):
         """
@@ -264,7 +253,7 @@ class DES(object):
                 '.' * 16, binascii.hexlify(self.pad(bytes(data, 'utf-8'))).decode()))
         elif isinstance(data, bytes):
             return b''.join(binascii.unhexlify(x.encode()) for x in [
-                self.decrypt_block(x, self.key1) for x in re.findall(
+                self.encrypt_block(x, self.key1) for x in re.findall(
                     '.' * 16, binascii.hexlify(self.pad(data)).decode())])
         else:
             raise TypeError("Invalid data type.")
